@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: GPL-3.0
+
+pragma solidity >=0.7.0 <0.9.0;
+
+contract ContratoAlquiler {
+    address payable public arrendador;
+    address payable public arrendatario;
+    uint public montoAlquiler;
+    uint public montoGarantia;
+    uint public fechaInicio;
+    uint public fechaFin;
+    bool public contratoFirmado;
+    bool public garantiaDepositada;
+    bool public garantiaDevuelta;
+    
+    constructor(address payable _arrendatario, uint _montoAlquiler, uint _montoGarantia, uint _fechaInicio, uint _fechaFin) {
+        arrendador = payable(msg.sender);
+        arrendatario = _arrendatario;
+        montoAlquiler = _montoAlquiler;
+        montoGarantia = _montoGarantia;
+        fechaInicio = _fechaInicio;
+        fechaFin = _fechaFin;
+        contratoFirmado = false;
+        garantiaDepositada = false;
+        garantiaDevuelta = false;
+    }
+    
+    modifier soloArrendador() {
+        require(msg.sender == arrendador);
+        _;
+    }
+    
+    modifier contratoNoFirmado() {
+        require(!contratoFirmado, "El contrato ya ha sido firmado");
+        _;
+    }
+    
+    function firmarContrato() public contratoNoFirmado {
+        require(msg.sender == arrendatario, "Solo el arrendatario puede firmar el contrato");
+        contratoFirmado = true;
+    }
+    
+    function depositarGarantia() public payable {
+        require(contratoFirmado );
+        require(msg.sender == arrendatario, "No es el arrendatario");
+        require(msg.value == montoGarantia, "El monto del deposito no coincide con el monto de la garantia");
+        garantiaDepositada = true;
+    }
+    
+    function devolverGarantia() public soloArrendador  {
+        require(contratoFirmado, "El contrato debe ser firmado antes de devolver la garantia");
+        require(garantiaDepositada, "La garantia no ha sido depositada");
+        require(!garantiaDevuelta, "La garantia ya ha sido devuelta");
+        garantiaDevuelta = true;
+        arrendatario.transfer(montoGarantia);
+    }
+    
+    function terminarContrato() public soloArrendador view {
+        require(contratoFirmado, "El contrato debe ser firmado antes de terminarlo");
+        //selfdestruct(arrendador);
+    }
+}
